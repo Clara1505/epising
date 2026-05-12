@@ -1,0 +1,56 @@
+# ============================================================
+# epising — .gitignore
+# Xcode (SwiftUI) + Supabase
+# ============================================================
+
+# ── SECRETS — JAMAIS COMMITTER ───────────────────────────────
+# Fichier contenant les clés Supabase (à créer localement)
+epising/Core/Network/Secrets.swift
+.env
+.env.local
+.env.*
+supabase/.env
+supabase/secrets.toml
+
+# ── XCODE ─────────────────────────────────────────────────────
+# Données de build (très volumineux, inutile dans le repo)
+DerivedData/
+build/
+*.xcarchive
+
+# Fichiers utilisateur Xcode (paramètres locaux de chaque dev)
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Résultats de tests
+*.xcresult
+
+# Fichiers temporaires
+*.moved-aside
+*.orig
+
+# ── SWIFT PACKAGE MANAGER ─────────────────────────────────────
+# Le dossier .build est local, les packages sont résolus au build
+.build/
+# Package.resolved peut être commité (fixe les versions)
+# On le garde donc — NE PAS l'ajouter ici
+
+# ── SUPABASE ──────────────────────────────────────────────────
+# Dossier de développement local Supabase (supabase start)
+.supabase/
+supabase/.temp/
+
+# ── MACOS ─────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+Thumbs.db
+
+# ── DIVERS ────────────────────────────────────────────────────
+*.log
+*.swp
+*~
