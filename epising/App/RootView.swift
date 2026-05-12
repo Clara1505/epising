@@ -18,7 +18,7 @@ struct RootView: View {
             } else if let profile = auth.profile {
                 switch profile.role {
                 case .student: StudentTabView()
-                case .teacher: Text("Vue enseignant — \(profile.fullName)")
+                case .teacher: TeacherTabView()
                 }
             } else {
                 LoginView()
