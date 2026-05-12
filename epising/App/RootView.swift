@@ -17,10 +17,8 @@ struct RootView: View {
                 ProgressView("Chargement...")
             } else if let profile = auth.profile {
                 switch profile.role {
-                case .student:
-                    Text("Vue étudiant — \(profile.fullName)")
-                case .teacher:
-                    Text("Vue enseignant — \(profile.fullName)")
+                case .student: StudentTabView()
+                case .teacher: Text("Vue enseignant — \(profile.fullName)")
                 }
             } else {
                 LoginView()
