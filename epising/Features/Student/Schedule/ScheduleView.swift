@@ -139,8 +139,7 @@ struct SessionCard: View {
                 // Bouton émarger si aujourd'hui
                 if isToday {
                     NavigationLink {
-                        // NFCScanView — à brancher plus tard
-                        Text("Scan NFC — \(session.courses.title)")
+                        NFCScanView(session: session)
                     } label: {
                         Label("Émarger maintenant", systemImage: "wave.3.right")
                             .font(.subheadline.bold())
