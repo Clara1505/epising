@@ -16,7 +16,7 @@ struct StudentTabView: View {
                     Label("Emploi du temps", systemImage: "calendar")
                 }
 
-            Text("Présences — à venir")
+            AttendanceHistoryView()
                 .tabItem {
                     Label("Présences", systemImage: "list.clipboard")
                 }
