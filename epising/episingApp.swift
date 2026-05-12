@@ -9,9 +9,13 @@ import SwiftUI
 
 @main
 struct episingApp: App {
+
+    @State private var auth = AuthViewModel()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
+                .environment(auth)
         }
     }
 }
