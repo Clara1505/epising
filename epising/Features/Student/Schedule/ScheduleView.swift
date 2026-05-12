@@ -26,28 +26,39 @@ struct ScheduleView: View {
                     )
                 } else {
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 0, pinnedViews: .sectionHeaders) {
-
-                            // ── Aujourd'hui ──────────────────────────
+                        LazyVStack(
+                            alignment: .leading,
+                            spacing: 0,
+                            pinnedViews: .sectionHeaders
+                        ) {
+                            // ── Aujourd'hui ──────────────────────
                             if !vm.todaySessions.isEmpty {
                                 Section {
                                     ForEach(vm.todaySessions) { session in
-                                        SessionCard(session: session, isToday: true)
-                                            .padding(.horizontal)
-                                            .padding(.bottom, 10)
+                                        SessionCard(
+                                            session: session,
+                                            isToday: true,
+                                            attendanceStatus: vm.attendanceBySession[session.id]
+                                        )
+                                        .padding(.horizontal)
+                                        .padding(.bottom, 10)
                                     }
                                 } header: {
                                     SectionHeader(title: "Aujourd'hui")
                                 }
                             }
 
-                            // ── À venir ──────────────────────────────
+                            // ── À venir ──────────────────────────
                             if !vm.upcomingSessions.isEmpty {
                                 Section {
                                     ForEach(vm.upcomingSessions) { session in
-                                        SessionCard(session: session, isToday: false)
-                                            .padding(.horizontal)
-                                            .padding(.bottom, 10)
+                                        SessionCard(
+                                            session: session,
+                                            isToday: false,
+                                            attendanceStatus: nil
+                                        )
+                                        .padding(.horizontal)
+                                        .padding(.bottom, 10)
                                     }
                                 } header: {
                                     SectionHeader(title: "À venir")
@@ -92,42 +103,57 @@ struct SectionHeader: View {
 struct SessionCard: View {
     let session: SessionWithCourse
     let isToday: Bool
+    let attendanceStatus: AttendanceStatus?
+
+    private var isSigned: Bool {
+        attendanceStatus == .present || attendanceStatus == .earlyLeave
+    }
+
+    private var accentColor: Color {
+        if isSigned                 { return .green }
+        if session.isSignWindowOpen { return .orange }
+        return .blue
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Barre colorée si aujourd'hui
+
+            // ── Barre colorée (aujourd'hui uniquement) ────────
             if isToday {
-                Rectangle()
-                    .fill(session.isSignWindowOpen ? Color.green : Color.blue)
-                    .frame(height: 4)
+                HStack {
+                    if isSigned {
+                        Label("Présent", systemImage: "checkmark.circle.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                    } else if session.isSignWindowOpen {
+                        Label("Fenêtre ouverte", systemImage: "clock.fill")
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                    } else {
+                        Text(session.slot.label.uppercased())
+                            .font(.caption.bold())
+                            .foregroundStyle(.white)
+                    }
+                    Spacer()
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(accentColor)
             }
 
+            // ── Contenu ───────────────────────────────────────
             VStack(alignment: .leading, spacing: 8) {
-                // Titre + badge
-                HStack {
-                    Text(session.courses.title)
-                        .font(.headline)
-                    Spacer()
-                    if session.isSignWindowOpen {
-                        Text("OUVERT")
-                            .font(.caption2.bold())
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.green)
-                            .foregroundStyle(.white)
-                            .clipShape(Capsule())
-                    } else if isToday {
-                        Text(session.slot.label.uppercased())
-                            .font(.caption2.bold())
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.blue)
-                            .foregroundStyle(.white)
-                            .clipShape(Capsule())
-                    }
+
+                // Date visible uniquement dans "À venir"
+                if !isToday {
+                    Text(session.formattedDate)
+                        .font(.caption.bold())
+                        .foregroundStyle(.blue)
                 }
 
-                // Infos
+                Text(session.courses.title)
+                    .font(.headline)
+
                 Label(session.timeRange, systemImage: "clock")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -136,8 +162,8 @@ struct SessionCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                // Bouton émarger si aujourd'hui
-                if isToday {
+                // Bouton émarger : fenêtre ouverte ET pas encore signé
+                if isToday && session.isSignWindowOpen && !isSigned {
                     NavigationLink {
                         NFCScanView(session: session)
                     } label: {
@@ -145,20 +171,25 @@ struct SessionCard: View {
                             .font(.subheadline.bold())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(Color.blue)
+                            .background(Color.orange)
                             .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                     .padding(.top, 4)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: isToday ? 0 : 12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
-            RoundedRectangle(cornerRadius: isToday ? 0 : 12)
-                .stroke(Color(.systemGray5), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    isToday ? accentColor : Color(.systemGray5),
+                    lineWidth: isToday ? 1.5 : 1
+                )
         )
     }
 }

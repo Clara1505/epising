@@ -8,7 +8,6 @@
 import Foundation
 import Supabase
 
-// Modèle de session enrichie avec les infos du cours (join Supabase)
 struct SessionWithCourse: Codable, Identifiable {
     let id: UUID
     let courseId: UUID
@@ -42,29 +41,35 @@ struct SessionWithCourse: Codable, Identifiable {
         case courses
     }
 
-    // Affichage : "09:00 – 12:00"
     var timeRange: String {
         "\(String(startTime.prefix(5))) – \(String(endTime.prefix(5)))"
     }
 
-    // Fenêtre d'émargement ouverte ?
     var isSignWindowOpen: Bool {
         guard let open = signOpenAt, let close = signCloseAt else { return false }
         let now = Date()
         return now >= open && now <= close
     }
 
-    // Date parsée pour comparaison
-    var date: Date? {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: sessionDate)
+    private var parsedDate: Date? {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "fr_FR")
+        return f.date(from: sessionDate)
     }
 
-    // Aujourd'hui ?
     var isToday: Bool {
-        guard let date else { return false }
-        return Calendar.current.isDateInToday(date)
+        guard let d = parsedDate else { return false }
+        return Calendar.current.isDateInToday(d)
+    }
+
+    // "Mer. 14 mai"
+    var formattedDate: String {
+        guard let d = parsedDate else { return sessionDate }
+        let f = DateFormatter()
+        f.dateFormat = "EEE. d MMM"
+        f.locale = Locale(identifier: "fr_FR")
+        return f.string(from: d).capitalized
     }
 }
 
@@ -73,18 +78,19 @@ struct SessionWithCourse: Codable, Identifiable {
 class ScheduleViewModel {
 
     var sessions: [SessionWithCourse] = []
+    var attendanceBySession: [UUID: AttendanceStatus] = [:]
     var isLoading = false
     var errorMessage: String?
 
-    // Sessions du jour
     var todaySessions: [SessionWithCourse] {
-        sessions.filter { $0.isToday }
+        sessions
+            .filter { $0.isToday }
             .sorted { $0.startTime < $1.startTime }
     }
 
-    // Sessions à venir (pas aujourd'hui)
     var upcomingSessions: [SessionWithCourse] {
-        sessions.filter { !$0.isToday }
+        sessions
+            .filter { !$0.isToday }
             .sorted { ($0.sessionDate, $0.startTime) < ($1.sessionDate, $1.startTime) }
     }
 
@@ -94,10 +100,9 @@ class ScheduleViewModel {
         defer { isLoading = false }
 
         do {
-            // Plage : aujourd'hui + 7 jours
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
-            let today = formatter.string(from: Date())
+            let today    = formatter.string(from: Date())
             let nextWeek = formatter.string(
                 from: Calendar.current.date(byAdding: .day, value: 7, to: Date())!
             )
@@ -111,7 +116,21 @@ class ScheduleViewModel {
                 .order("start_time")
                 .execute()
                 .value
-            
+
+            let sessionIds = sessions.map { $0.id.uuidString }
+            if !sessionIds.isEmpty {
+                let attendances: [Attendance] = try await supabase
+                    .from("attendances")
+                    .select("id, session_id, student_id, status, signed_at, marked_by, device_id, left_at, teacher_note")
+                    .in("session_id", values: sessionIds)
+                    .execute()
+                    .value
+
+                attendanceBySession = Dictionary(
+                    uniqueKeysWithValues: attendances.map { ($0.sessionId, $0.status) }
+                )
+            }
+
         } catch {
             errorMessage = error.localizedDescription
         }
