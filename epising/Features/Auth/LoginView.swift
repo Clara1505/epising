@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Observation
 
 struct LoginView: View {
 
@@ -13,70 +14,157 @@ struct LoginView: View {
 
     @State private var email    = ""
     @State private var password = ""
+    @State private var isPasswordVisible = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        ZStack {
+            Color(.systemGroupedBackground)
+                .ignoresSafeArea()
 
-            // ── Header ──────────────────────────────────────
-            VStack(spacing: 12) {
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 56))
-                    .foregroundStyle(.blue)
-                Text("epising")
-                    .font(.largeTitle.bold())
-                Text("Signature de présence EPITA")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.top, 80)
-            .padding(.bottom, 48)
+            ScrollView {
+                VStack(spacing: 0) {
 
-            // ── Formulaire ───────────────────────────────────
-            VStack(spacing: 16) {
-                TextField("Email", text: $email)
-                    .keyboardType(.emailAddress)
-                    .autocapitalization(.none)
-                    .textContentType(.emailAddress)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    // ── Header ───────────────────────────────
+                    VStack(spacing: 16) {
+                        Spacer().frame(height: 60)
 
-                SecureField("Mot de passe", text: $password)
-                    .textContentType(.password)
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                if let error = auth.errorMessage {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-
-                Button {
-                    Task { await auth.signIn(email: email, password: password) }
-                } label: {
-                    Group {
-                        if auth.isLoading {
-                            ProgressView().tint(.white)
-                        } else {
-                            Text("Se connecter")
-                                .fontWeight(.semibold)
+                        // Logo
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 24)
+                                .fill(Color.blue)
+                                .frame(width: 88, height: 88)
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 44))
+                                .foregroundStyle(.white)
                         }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(.blue)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .disabled(email.isEmpty || password.isEmpty || auth.isLoading)
-            }
-            .padding(.horizontal, 24)
+                        .shadow(color: .blue.opacity(0.3), radius: 12, y: 6)
 
-            Spacer()
+                        VStack(spacing: 6) {
+                            Text("epising")
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(.primary)
+                            Text("Signature de présence EPITA")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer().frame(height: 32)
+                    }
+
+                    // ── Formulaire ───────────────────────────
+                    VStack(spacing: 16) {
+
+                        // Email
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Email")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
+
+                            HStack {
+                                Image(systemName: "envelope")
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 20)
+                                TextField("prenom.nom@epita.fr", text: $email)
+                                    .keyboardType(.emailAddress)
+                                    .autocapitalization(.none)
+                                    .textContentType(.emailAddress)
+                                    .autocorrectionDisabled()
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                        }
+
+                        // Mot de passe
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Mot de passe")
+                                .font(.caption.bold())
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 4)
+
+                            HStack {
+                                Image(systemName: "lock")
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 20)
+                                if isPasswordVisible {
+                                    TextField("••••••••", text: $password)
+                                        .textContentType(.password)
+                                        .autocapitalization(.none)
+                                        .autocorrectionDisabled()
+                                } else {
+                                    SecureField("••••••••", text: $password)
+                                        .textContentType(.password)
+                                }
+                                Button {
+                                    isPasswordVisible.toggle()
+                                } label: {
+                                    Image(systemName: isPasswordVisible
+                                          ? "eye.slash" : "eye")
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                        }
+
+                        // Message d'erreur
+                        if let error = auth.errorMessage {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundStyle(.red)
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundStyle(.red)
+                            }
+                            .padding(.horizontal, 4)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        // Bouton connexion
+                        Button {
+                            Task { await auth.signIn(email: email, password: password) }
+                        } label: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 14)
+                                    .fill(canSubmit ? Color.blue : Color(.systemGray4))
+                                if auth.isLoading {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Text("Se connecter")
+                                        .font(.headline)
+                                        .foregroundStyle(.white)
+                                }
+                            }
+                            .frame(height: 52)
+                        }
+                        .disabled(!canSubmit || auth.isLoading)
+                        .padding(.top, 8)
+                    }
+                    .padding(.horizontal, 24)
+
+                    Spacer().frame(height: 40)
+
+                    // ── Footer ───────────────────────────────
+                    Text("EPITA · Master 1 · Développement iOS")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .padding(.bottom, 32)
+                }
+            }
         }
-        .background(Color(.systemBackground))
+    }
+
+    private var canSubmit: Bool {
+        !email.isEmpty && !password.isEmpty
     }
 }
