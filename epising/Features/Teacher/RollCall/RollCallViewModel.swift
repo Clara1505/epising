@@ -110,6 +110,14 @@ class RollCallViewModel {
             status: "present"
         )
     }
+    
+    func markAbsent(studentId: UUID, sessionId: UUID) async {
+        await upsertAttendance(
+            studentId: studentId,
+            sessionId: sessionId,
+            status: "absent"
+        )
+    }
 
     // Marquer parti tôt
     func markEarlyLeave(studentId: UUID, sessionId: UUID) async {

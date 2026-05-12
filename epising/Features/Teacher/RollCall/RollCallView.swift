@@ -11,6 +11,7 @@ struct RollCallView: View {
 
     let session: TeacherSession
     @State private var vm = RollCallViewModel()
+    
 
     var body: some View {
         Group {
@@ -51,20 +52,13 @@ struct RollCallView: View {
                                 StudentRollRow(
                                     student: student,
                                     onMarkPresent: {
-                                        Task {
-                                            await vm.markPresent(
-                                                studentId: student.studentId,
-                                                sessionId: session.id
-                                            )
-                                        }
+                                        Task { await vm.markPresent(studentId: student.studentId, sessionId: session.id) }
                                     },
                                     onMarkEarlyLeave: {
-                                        Task {
-                                            await vm.markEarlyLeave(
-                                                studentId: student.studentId,
-                                                sessionId: session.id
-                                            )
-                                        }
+                                        Task { await vm.markEarlyLeave(studentId: student.studentId, sessionId: session.id) }
+                                    },
+                                    onMarkAbsent: {
+                                        Task { await vm.markAbsent(studentId: student.studentId, sessionId: session.id) }
                                     }
                                 )
                                 if student.id != vm.students.last?.id {
@@ -113,6 +107,8 @@ struct StudentRollRow: View {
     let student: StudentAttendance
     let onMarkPresent: () -> Void
     let onMarkEarlyLeave: () -> Void
+    let onMarkAbsent: () -> Void
+    
 
     private var statusColor: Color {
         switch student.status {
@@ -169,33 +165,60 @@ struct StudentRollRow: View {
                 Spacer()
             }
 
-            // Boutons action — visibles pour présents et en attente
+            // Bouton présent → sur absents et en attente
             if student.status == .pending || student.status == .absent {
+                Button {
+                    onMarkPresent()
+                } label: {
+                    Text("Marquer présent")
+                        .font(.caption.bold())
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background(Color.green.opacity(0.15))
+                        .foregroundStyle(.green)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+
+            // Bouton parti tôt + absent → sur les présents
+            if student.status == .present {
                 HStack(spacing: 8) {
                     Button {
-                        onMarkPresent()
+                        onMarkEarlyLeave()
                     } label: {
-                        Text("Marquer présent")
+                        Text("Parti tôt")
                             .font(.caption.bold())
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 7)
-                            .background(Color.green.opacity(0.15))
-                            .foregroundStyle(.green)
+                            .background(Color.orange.opacity(0.15))
+                            .foregroundStyle(.orange)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    Button {
+                        onMarkAbsent()
+                    } label: {
+                        Text("Marquer absent")
+                            .font(.caption.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                            .background(Color.red.opacity(0.1))
+                            .foregroundStyle(.red)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                 }
             }
 
-            if student.status == .present {
+            // Bouton absent → sur partis tôt
+            if student.status == .earlyLeave {
                 Button {
-                    onMarkEarlyLeave()
+                    onMarkAbsent()
                 } label: {
-                    Text("Marquer parti tôt")
+                    Text("Marquer absent")
                         .font(.caption.bold())
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 7)
-                        .background(Color.orange.opacity(0.15))
-                        .foregroundStyle(.orange)
+                        .background(Color.red.opacity(0.1))
+                        .foregroundStyle(.red)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             }

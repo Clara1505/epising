@@ -35,6 +35,7 @@ struct SessionHistoryView: View {
                                     .foregroundStyle(
                                         vm.globalRate >= 80 ? Color.green : Color.orange
                                     )
+                                    .contentTransition(.numericText())
                                 Text("Taux de présence global")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
@@ -52,6 +53,7 @@ struct SessionHistoryView: View {
                                                     * CGFloat(vm.globalRate) / 100,
                                                 height: 8
                                             )
+                                            .animation(.easeInOut, value: vm.globalRate)
                                     }
                                 }
                                 .frame(height: 8)
@@ -66,7 +68,13 @@ struct SessionHistoryView: View {
                             // ── Liste séances ──────────────────
                             VStack(spacing: 0) {
                                 ForEach(vm.summaries) { summary in
-                                    HistoryRow(summary: summary)
+                                    NavigationLink {
+                                        SessionDetailView(session: summary)
+                                    } label: {
+                                        HistoryRow(summary: summary)
+                                    }
+                                    .buttonStyle(.plain)
+
                                     if summary.id != vm.summaries.last?.id {
                                         Divider().padding(.leading, 16)
                                     }
@@ -85,7 +93,11 @@ struct SessionHistoryView: View {
             .task {
                 if let id = auth.profile?.id {
                     await vm.load(teacherId: id)
+                    vm.subscribeRealtime(teacherId: id)
                 }
+            }
+            .onDisappear {
+                vm.unsubscribe()
             }
             .refreshable {
                 if let id = auth.profile?.id {
@@ -105,7 +117,6 @@ struct HistoryRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Indicateur coloré
             RoundedRectangle(cornerRadius: 2)
                 .fill(rateColor)
                 .frame(width: 4, height: 44)
@@ -113,6 +124,7 @@ struct HistoryRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(summary.courseTitle)
                     .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.primary)
                 HStack(spacing: 4) {
                     Text(summary.formattedDate)
                     Text("·")
@@ -132,6 +144,10 @@ struct HistoryRow: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

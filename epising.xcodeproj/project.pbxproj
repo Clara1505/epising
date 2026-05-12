@@ -38,9 +38,22 @@
 		B135D5862F9B94D000B1C31D /* episingUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = episingUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		B1DBCF622FB3766400014339 /* Exceptions for "epising" folder in "epising" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				README.md,
+			);
+			target = B135D56A2F9B94CB00B1C31D /* epising */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		B135D56D2F9B94CB00B1C31D /* epising */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				B1DBCF622FB3766400014339 /* Exceptions for "epising" folder in "epising" target */,
+			);
 			path = epising;
 			sourceTree = "<group>";
 		};

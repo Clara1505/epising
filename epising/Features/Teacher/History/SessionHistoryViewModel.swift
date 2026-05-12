@@ -22,10 +22,6 @@ struct SessionHistorySummary: Identifiable {
         return Int(Double(presentCount) / Double(totalCount) * 100)
     }
 
-    var rateColor: String {
-        attendanceRate >= 80 ? "green" : "orange"
-    }
-
     private var parsedDate: Date? {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -49,6 +45,8 @@ class SessionHistoryViewModel {
     var isLoading = false
     var errorMessage: String?
 
+    private var realtimeTask: Task<Void, Never>?
+
     var globalRate: Int {
         guard !summaries.isEmpty else { return 0 }
         let total   = summaries.reduce(0) { $0 + $1.totalCount }
@@ -67,17 +65,16 @@ class SessionHistoryViewModel {
             formatter.dateFormat = "yyyy-MM-dd"
             let today = formatter.string(from: Date())
 
-            // Sessions passées de cet enseignant
+            // lte = inclut aujourd'hui
             let sessions: [TeacherSession] = try await supabase
                 .from("sessions")
                 .select("*, courses!inner(title, room, nfc_tag_id, teacher_id)")
                 .eq("courses.teacher_id", value: teacherId.uuidString)
-                .lt("session_date", value: today)
+                .lte("session_date", value: today)
                 .order("session_date", ascending: false)
                 .execute()
                 .value
 
-            // Pour chaque session, charge les attendances
             var result: [SessionHistorySummary] = []
 
             for session in sessions {
@@ -92,7 +89,6 @@ class SessionHistoryViewModel {
                     $0.status == .present || $0.status == .earlyLeave
                 }.count
 
-                // Total = inscrits au cours
                 let enrollments: [Enrollment] = try await supabase
                     .from("enrollments")
                     .select()
@@ -116,5 +112,29 @@ class SessionHistoryViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func subscribeRealtime(teacherId: UUID) {
+        realtimeTask = Task {
+            let channel = supabase.realtimeV2.channel("history-\(teacherId)")
+
+            let changes = await channel.postgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "attendances"
+            )
+
+            await channel.subscribe()
+
+            for await _ in changes {
+                guard !Task.isCancelled else { break }
+                await self.load(teacherId: teacherId)
+            }
+        }
+    }
+
+    func unsubscribe() {
+        realtimeTask?.cancel()
+        realtimeTask = nil
     }
 }
