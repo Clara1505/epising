@@ -15,7 +15,7 @@ struct TeacherTabView: View {
                     Label("Mes cours", systemImage: "calendar")
                 }
 
-            Text("Historique — à venir")
+            SessionHistoryView()
                 .tabItem {
                     Label("Historique", systemImage: "clock.arrow.circlepath")
                 }
