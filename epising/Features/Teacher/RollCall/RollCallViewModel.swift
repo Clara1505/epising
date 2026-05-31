@@ -9,13 +9,13 @@ import Foundation
 import Supabase
 
 struct StudentAttendance: Identifiable {
-    let id: UUID          // attendance id (ou student id si pas encore créé)
+    let id: UUID
     let studentId: UUID
     let fullName: String
     let email: String
     var status: AttendanceStatus
     let signedAt: Date?
-    let leftAt: Date?
+    var leftAt: Date?   // var pour pouvoir le remettre à nil
 }
 
 @MainActor
@@ -42,7 +42,6 @@ class RollCallViewModel {
         defer { isLoading = false }
 
         do {
-            // 1. Récupère les inscrits au cours
             struct EnrollmentWithProfile: Codable {
                 let studentId: UUID
                 let profiles: ProfileInfo
@@ -70,7 +69,6 @@ class RollCallViewModel {
                 .execute()
                 .value
 
-            // 2. Récupère les attendances existantes
             let attendances: [Attendance] = try await supabase
                 .from("attendances")
                 .select("id, session_id, student_id, status, signed_at, marked_by, device_id, left_at, teacher_note")
@@ -82,7 +80,6 @@ class RollCallViewModel {
                 uniqueKeysWithValues: attendances.map { ($0.studentId, $0) }
             )
 
-            // 3. Merge : pour chaque inscrit, récupère son statut
             students = enrollments.map { enrollment in
                 let att = attendanceMap[enrollment.studentId]
                 return StudentAttendance(
@@ -102,38 +99,23 @@ class RollCallViewModel {
         }
     }
 
-    // Marquer présent manuellement
     func markPresent(studentId: UUID, sessionId: UUID) async {
-        await upsertAttendance(
-            studentId: studentId,
-            sessionId: sessionId,
-            status: "present"
-        )
-    }
-    
-    func markAbsent(studentId: UUID, sessionId: UUID) async {
-        await upsertAttendance(
-            studentId: studentId,
-            sessionId: sessionId,
-            status: "absent"
-        )
+        await upsertAttendance(studentId: studentId, sessionId: sessionId, status: "present", leftAt: nil)
     }
 
-    // Marquer parti tôt
+    func markAbsent(studentId: UUID, sessionId: UUID) async {
+        await upsertAttendance(studentId: studentId, sessionId: sessionId, status: "absent", leftAt: nil)
+    }
+
     func markEarlyLeave(studentId: UUID, sessionId: UUID) async {
-        await upsertAttendance(
-            studentId: studentId,
-            sessionId: sessionId,
-            status: "early_leave",
-            leftAt: Date()
-        )
+        await upsertAttendance(studentId: studentId, sessionId: sessionId, status: "early_leave", leftAt: Date())
     }
 
     private func upsertAttendance(
         studentId: UUID,
         sessionId: UUID,
         status: String,
-        leftAt: Date? = nil
+        leftAt: Date?
     ) async {
         do {
             struct UpsertBody: Encodable {
@@ -155,16 +137,24 @@ class RollCallViewModel {
                 ), onConflict: "session_id,student_id")
                 .execute()
 
-            // Met à jour localement sans recharger
+            // ── Mise à jour locale ────────────────────────────
             if let idx = students.firstIndex(where: { $0.studentId == studentId }) {
+                let newStatus: AttendanceStatus
+                switch status {
+                case "present":     newStatus = .present
+                case "absent":      newStatus = .absent      // BUG 1 corrigé
+                case "early_leave": newStatus = .earlyLeave
+                default:            newStatus = .pending
+                }
+
                 students[idx] = StudentAttendance(
                     id: students[idx].id,
                     studentId: studentId,
                     fullName: students[idx].fullName,
                     email: students[idx].email,
-                    status: status == "present" ? .present : .earlyLeave,
+                    status: newStatus,
                     signedAt: students[idx].signedAt,
-                    leftAt: leftAt
+                    leftAt: leftAt   // BUG 2 corrigé : nil quand on repasse présent
                 )
             }
         } catch {

@@ -23,10 +23,12 @@ struct TeacherSession: Codable, Identifiable {
         let title: String
         let room: String
         let nfcTagId: String
+        let teacherId: String?
 
         enum CodingKeys: String, CodingKey {
             case title, room
-            case nfcTagId = "nfc_tag_id"
+            case nfcTagId  = "nfc_tag_id"
+            case teacherId = "teacher_id"
         }
     }
 
@@ -68,13 +70,6 @@ struct TeacherSession: Codable, Identifiable {
         f.locale = Locale(identifier: "fr_FR")
         return f.string(from: d).capitalized
     }
-
-    // Nombre d'inscrits (chargé séparément)
-    var enrollmentCount: Int = 0
-
-    enum AttendanceSummary {
-        case open, closed, signed
-    }
 }
 
 @MainActor
@@ -109,7 +104,6 @@ class CoursesViewModel {
                 from: Calendar.current.date(byAdding: .day, value: 7, to: Date())!
             )
 
-            // Sessions des cours de CET enseignant
             sessions = try await supabase
                 .from("sessions")
                 .select("*, courses!inner(title, room, nfc_tag_id, teacher_id)")
@@ -121,7 +115,6 @@ class CoursesViewModel {
                 .execute()
                 .value
 
-            // Compte les inscrits par cours
             let courseIds = Array(Set(sessions.map { $0.courseId.uuidString }))
             if !courseIds.isEmpty {
                 let enrollments: [Enrollment] = try await supabase
@@ -131,7 +124,6 @@ class CoursesViewModel {
                     .execute()
                     .value
 
-                // Groupe par course_id
                 var counts: [UUID: Int] = [:]
                 for e in enrollments {
                     counts[e.courseId, default: 0] += 1
@@ -139,20 +131,6 @@ class CoursesViewModel {
                 enrollmentCounts = counts
             }
 
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    // Ouvre la fenêtre d'émargement pour une session
-    func openSignWindow(sessionId: UUID) async {
-        do {
-            try await supabase
-                .rpc("open_sign_window", params: [
-                    "p_session_id": sessionId.uuidString,
-                    "p_duration_minutes": "60"
-                ])
-                .execute()
         } catch {
             errorMessage = error.localizedDescription
         }

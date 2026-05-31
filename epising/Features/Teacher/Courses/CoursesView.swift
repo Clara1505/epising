@@ -37,10 +37,11 @@ struct CoursesView: View {
                                         TeacherSessionCard(
                                             session: session,
                                             enrollmentCount: vm.enrollmentCounts[session.courseId] ?? 0,
-                                            onOpenWindow: {
+                                            onRefresh: {
                                                 Task {
-                                                    await vm.openSignWindow(sessionId: session.id)
-                                                    await vm.load(teacherId: auth.profile!.id)
+                                                    if let id = auth.profile?.id {
+                                                        await vm.load(teacherId: id)
+                                                    }
                                                 }
                                             }
                                         )
@@ -58,7 +59,7 @@ struct CoursesView: View {
                                         TeacherSessionCard(
                                             session: session,
                                             enrollmentCount: vm.enrollmentCounts[session.courseId] ?? 0,
-                                            onOpenWindow: {}
+                                            onRefresh: {}
                                         )
                                         .padding(.horizontal)
                                         .padding(.bottom, 10)
@@ -101,7 +102,9 @@ struct CoursesView: View {
 struct TeacherSessionCard: View {
     let session: TeacherSession
     let enrollmentCount: Int
-    let onOpenWindow: () -> Void
+    let onRefresh: () -> Void
+
+    @Environment(AuthViewModel.self) private var auth
 
     private var accentColor: Color {
         session.isSignWindowOpen ? .orange : .blue
@@ -114,7 +117,8 @@ struct TeacherSessionCard: View {
             if session.isToday {
                 HStack {
                     if session.isSignWindowOpen {
-                        Label("Fenêtre ouverte", systemImage: "lock.open.fill")
+                        Label("Fenêtre ouverte — étudiants peuvent émarger",
+                              systemImage: "lock.open.fill")
                             .font(.caption.bold())
                             .foregroundStyle(.white)
                     } else {
@@ -157,13 +161,16 @@ struct TeacherSessionCard: View {
                 // Boutons action (aujourd'hui uniquement)
                 if session.isToday {
                     HStack(spacing: 10) {
-                        // Ouvrir fenêtre NFC
+
+                        // Ouvrir via scan carte prof
                         if !session.isSignWindowOpen {
-                            Button {
-                                onOpenWindow()
+                            NavigationLink {
+                                TeacherNFCScanView(teacherProfile: auth.profile!) {
+                                    onRefresh()
+                                }
                             } label: {
-                                Label("Ouvrir l'émargement",
-                                      systemImage: "lock.open")
+                                Label("Scanner ma carte",
+                                      systemImage: "wave.3.right")
                                     .font(.subheadline.bold())
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 10)
@@ -173,7 +180,7 @@ struct TeacherSessionCard: View {
                             }
                         }
 
-                        // Faire l'appel
+                        // Faire l'appel  ← CORRIGÉ
                         NavigationLink {
                             RollCallView(session: session)
                         } label: {

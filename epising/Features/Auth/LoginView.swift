@@ -29,15 +29,12 @@ struct LoginView: View {
                         Spacer().frame(height: 60)
 
                         // Logo
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 24)
-                                .fill(Color.blue)
-                                .frame(width: 88, height: 88)
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 44))
-                                .foregroundStyle(.white)
-                        }
-                        .shadow(color: .blue.opacity(0.3), radius: 12, y: 6)
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 88, height: 88)
+                            .clipShape(RoundedRectangle(cornerRadius: 20))
+                            .shadow(color: .blue.opacity(0.3), radius: 12, y: 6)
 
                         VStack(spacing: 6) {
                             Text("epising")
@@ -155,7 +152,7 @@ struct LoginView: View {
                     Spacer().frame(height: 40)
 
                     // ── Footer ───────────────────────────────
-                    Text("EPITA · Master 1 · Développement iOS")
+                    Text("EPITA · APPING 2 · Développement iOS")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                         .padding(.bottom, 32)

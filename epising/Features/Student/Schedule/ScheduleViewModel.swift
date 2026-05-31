@@ -23,9 +23,19 @@ struct SessionWithCourse: Codable, Identifiable {
         let title: String
         let room: String
         let nfcTagId: String
+        let profiles: TeacherInfo?
+
+        struct TeacherInfo: Codable {
+            let nfcCardId: String?
+            enum CodingKeys: String, CodingKey {
+                case nfcCardId = "nfc_card_id"
+            }
+        }
+
+        var teacherNfcCardId: String? { profiles?.nfcCardId }
 
         enum CodingKeys: String, CodingKey {
-            case title, room
+            case title, room, profiles
             case nfcTagId = "nfc_tag_id"
         }
     }
@@ -47,8 +57,7 @@ struct SessionWithCourse: Codable, Identifiable {
 
     var isSignWindowOpen: Bool {
         guard let open = signOpenAt, let close = signCloseAt else { return false }
-        let now = Date()
-        return now >= open && now <= close
+        return Date() >= open && Date() <= close
     }
 
     private var parsedDate: Date? {
@@ -63,7 +72,6 @@ struct SessionWithCourse: Codable, Identifiable {
         return Calendar.current.isDateInToday(d)
     }
 
-    // "Mer. 14 mai"
     var formattedDate: String {
         guard let d = parsedDate else { return sessionDate }
         let f = DateFormatter()
@@ -83,14 +91,12 @@ class ScheduleViewModel {
     var errorMessage: String?
 
     var todaySessions: [SessionWithCourse] {
-        sessions
-            .filter { $0.isToday }
+        sessions.filter { $0.isToday }
             .sorted { $0.startTime < $1.startTime }
     }
 
     var upcomingSessions: [SessionWithCourse] {
-        sessions
-            .filter { !$0.isToday }
+        sessions.filter { !$0.isToday }
             .sorted { ($0.sessionDate, $0.startTime) < ($1.sessionDate, $1.startTime) }
     }
 
@@ -109,7 +115,7 @@ class ScheduleViewModel {
 
             sessions = try await supabase
                 .from("sessions")
-                .select("*, courses(title, room, nfc_tag_id)")
+                .select("*, courses(title, room, nfc_tag_id, profiles(nfc_card_id))")
                 .gte("session_date", value: today)
                 .lte("session_date", value: nextWeek)
                 .order("session_date")

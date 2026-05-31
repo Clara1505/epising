@@ -1,5 +1,5 @@
 //
-//  NFC.swift
+//  NFCManager.swift
 //  epising
 //
 //  Created by Clara Sion Saunier on 12/05/2026.
@@ -24,7 +24,7 @@ class NFCManager: NSObject {
     private var session: NFCNDEFReaderSession?
     private var continuation: CheckedContinuation<String, Error>?
 
-    // Lance le scan NFC et retourne le nfc_tag_id lu sur le tag
+    // Lance le scan NFC
     func scan() async throws -> String {
         return try await withCheckedThrowingContinuation { continuation in
             self.continuation = continuation
@@ -33,13 +33,13 @@ class NFCManager: NSObject {
                 queue: nil,
                 invalidateAfterFirstRead: true
             )
-            self.session?.alertMessage = "Approche ton iPhone du lecteur NFC de la salle."
+            self.session?.alertMessage = "Approche ton iPhone de la carte NFC."
             self.session?.begin()
             self.isScanning = true
         }
     }
 
-    // Appelle la Edge Function validate-nfc
+    // Étudiant : valide la présence via la carte du prof
     func validateWithBackend(nfcTagId: String) async -> NFCResult {
         let deviceId = KeychainHelper.getOrCreateDeviceId()
 
@@ -49,7 +49,7 @@ class NFCManager: NSObject {
                     "validate-nfc",
                     options: .init(body: [
                         "nfc_tag_id": nfcTagId,
-                        "device_id": deviceId
+                        "device_id":  deviceId
                     ])
                 )
 
@@ -62,9 +62,46 @@ class NFCManager: NSObject {
             return .failure(.unknown(error.localizedDescription))
         }
     }
+
+    // Enseignant : ouvre la fenêtre d'émargement via sa carte
+    func openTeacherSession(nfcCardId: String) async -> (success: Bool, message: String) {
+        do {
+            struct OpenResponse: Codable {
+                let success: Bool
+                let reason: String?
+                let sessionId: String?
+                let durationMinutes: Int?
+                enum CodingKeys: String, CodingKey {
+                    case success, reason
+                    case sessionId       = "session_id"
+                    case durationMinutes = "duration_minutes"
+                }
+            }
+
+            let response: OpenResponse = try await supabase
+                .rpc("open_session_by_teacher_card", params: [
+                    "p_nfc_card_id":      nfcCardId,
+                    "p_duration_minutes": "60"
+                ])
+                .execute()
+                .value
+
+            if response.success {
+                return (true, "Fenêtre ouverte — les étudiants peuvent émarger pendant 60 min")
+            } else {
+                switch response.reason {
+                case "no_active_session": return (false, "Aucune séance en cours à cette heure")
+                case "teacher_not_found": return (false, "Carte non reconnue")
+                default: return (false, response.reason ?? "Erreur inconnue")
+                }
+            }
+        } catch {
+            return (false, error.localizedDescription)
+        }
+    }
 }
 
-// Réponse de la Edge Function
+// MARK: - Response model
 struct NFCValidationResponse: Codable {
     let success: Bool
     let reason: String?
@@ -110,7 +147,6 @@ extension NFCManager: NFCNDEFReaderSessionDelegate {
         didInvalidateWithError error: Error
     ) {
         Task { @MainActor in
-            // L'utilisateur a annulé — pas une vraie erreur
             if (error as NSError).code != 200 {
                 self.continuation?.resume(throwing: error)
             } else {

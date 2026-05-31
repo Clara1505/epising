@@ -11,7 +11,6 @@ struct RollCallView: View {
 
     let session: TeacherSession
     @State private var vm = RollCallViewModel()
-    
 
     var body: some View {
         Group {
@@ -24,23 +23,11 @@ struct RollCallView: View {
 
                         // ── Stats ──────────────────────────────
                         HStack(spacing: 0) {
-                            StatPill(
-                                value: vm.presentCount,
-                                label: "Présents",
-                                color: .green
-                            )
+                            StatPill(value: vm.presentCount, label: "Présents",   color: .green)
                             Divider().frame(height: 40)
-                            StatPill(
-                                value: vm.absentCount,
-                                label: "Absents",
-                                color: .red
-                            )
+                            StatPill(value: vm.absentCount,  label: "Absents",    color: .red)
                             Divider().frame(height: 40)
-                            StatPill(
-                                value: vm.pendingCount,
-                                label: "En attente",
-                                color: .gray
-                            )
+                            StatPill(value: vm.pendingCount, label: "En attente", color: .gray)
                         }
                         .background(Color(.systemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -108,7 +95,6 @@ struct StudentRollRow: View {
     let onMarkPresent: () -> Void
     let onMarkEarlyLeave: () -> Void
     let onMarkAbsent: () -> Void
-    
 
     private var statusColor: Color {
         switch student.status {
@@ -131,7 +117,6 @@ struct StudentRollRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                // Initiales
                 ZStack {
                     Circle()
                         .fill(statusColor.opacity(0.15))
@@ -141,7 +126,6 @@ struct StudentRollRow: View {
                         .foregroundStyle(statusColor)
                 }
 
-                // Nom + statut
                 VStack(alignment: .leading, spacing: 2) {
                     Text(student.fullName)
                         .font(.subheadline.weight(.medium))
@@ -165,27 +149,12 @@ struct StudentRollRow: View {
                 Spacer()
             }
 
-            // Bouton présent → sur absents et en attente
-            if student.status == .pending || student.status == .absent {
-                Button {
-                    onMarkPresent()
-                } label: {
-                    Text("Marquer présent")
-                        .font(.caption.bold())
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 7)
-                        .background(Color.green.opacity(0.15))
-                        .foregroundStyle(.green)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-            }
+            // ── Boutons selon statut ───────────────────────────
 
-            // Bouton parti tôt + absent → sur les présents
+            // Présent → Parti tôt + Absent
             if student.status == .present {
                 HStack(spacing: 8) {
-                    Button {
-                        onMarkEarlyLeave()
-                    } label: {
+                    Button(action: onMarkEarlyLeave) {
                         Text("Parti tôt")
                             .font(.caption.bold())
                             .frame(maxWidth: .infinity)
@@ -194,9 +163,7 @@ struct StudentRollRow: View {
                             .foregroundStyle(.orange)
                             .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
-                    Button {
-                        onMarkAbsent()
-                    } label: {
+                    Button(action: onMarkAbsent) {
                         Text("Marquer absent")
                             .font(.caption.bold())
                             .frame(maxWidth: .infinity)
@@ -208,18 +175,64 @@ struct StudentRollRow: View {
                 }
             }
 
-            // Bouton absent → sur partis tôt
+            // Parti tôt → Marquer présent + Marquer absent  (BUG 3 corrigé)
             if student.status == .earlyLeave {
-                Button {
-                    onMarkAbsent()
-                } label: {
-                    Text("Marquer absent")
+                HStack(spacing: 8) {
+                    Button(action: onMarkPresent) {
+                        Text("Marquer présent")
+                            .font(.caption.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                            .background(Color.green.opacity(0.15))
+                            .foregroundStyle(.green)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    Button(action: onMarkAbsent) {
+                        Text("Marquer absent")
+                            .font(.caption.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                            .background(Color.red.opacity(0.1))
+                            .foregroundStyle(.red)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                }
+            }
+
+            // Absent → Marquer présent
+            if student.status == .absent {
+                Button(action: onMarkPresent) {
+                    Text("Marquer présent")
                         .font(.caption.bold())
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 7)
-                        .background(Color.red.opacity(0.1))
-                        .foregroundStyle(.red)
+                        .background(Color.green.opacity(0.15))
+                        .foregroundStyle(.green)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+
+            // En attente → Marquer présent + Marquer absent
+            if student.status == .pending {
+                HStack(spacing: 8) {
+                    Button(action: onMarkPresent) {
+                        Text("Marquer présent")
+                            .font(.caption.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                            .background(Color.green.opacity(0.15))
+                            .foregroundStyle(.green)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    Button(action: onMarkAbsent) {
+                        Text("Marquer absent")
+                            .font(.caption.bold())
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 7)
+                            .background(Color.red.opacity(0.1))
+                            .foregroundStyle(.red)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
                 }
             }
         }

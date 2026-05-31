@@ -61,7 +61,7 @@ struct NFCScanView: View {
 
                         #if DEBUG
                         Button {
-                            scannedTagId = session.courses.nfcTagId
+                            scannedTagId = session.courses.teacherNfcCardId ?? session.courses.nfcTagId
                             withAnimation { step = .signing }
                         } label: {
                             Label("Simuler NFC (DEBUG)", systemImage: "ant.fill")

@@ -18,10 +18,12 @@ struct Profile: Codable, Identifiable {
     let fullName:  String
     let role:      UserRole
     let deviceId:  String?
+    let nfcCardId: String?
 
     enum CodingKeys: String, CodingKey {
         case id, email, role
-        case fullName = "full_name"
-        case deviceId = "device_id"
+        case fullName  = "full_name"
+        case deviceId  = "device_id"
+        case nfcCardId = "nfc_card_id"
     }
 }
